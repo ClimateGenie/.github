@@ -1,4 +1,8 @@
-## Hi there 👋
+## Hello World! 👋
+
+![Gene](https://raw.githubusercontent.com/ClimateGenie/climate-genie-api/main/static/images/woo.png)
+#### My name is Gene!
+I'm here to help you keep a look out for Climate Change misinformation circulating the internet.
 
 <!--
 
