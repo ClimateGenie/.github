@@ -1,7 +1,7 @@
 ## Hello World! 👋
 
 <img src="https://raw.githubusercontent.com/ClimateGenie/climate-genie-api/main/static/images/woo.png" alt="Gene" width="200" height="auto"/>
-#### My name is Gene!
+My name is Gene!
 I'm here to help you keep a look out for Climate Change misinformation circulating the internet.
 
 <!--
