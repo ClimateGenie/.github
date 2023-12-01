@@ -1,0 +1,128 @@
+name: CI-CD
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  External:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACCESS_TOKEN  }}
+          submodules: recursive
+
+      - name: Build
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml build app
+
+      - name: Up db
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml up -d db
+
+      - name: Seed db
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml run db_manager
+
+      - name: Up Api
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml up -d app
+
+      - name: Test External
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml exec app pytest tests/external.py
+
+      - name: Logs
+        if: always()
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml logs app
+
+      - name: Down
+        run: docker compose down
+
+  Internal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACCESS_TOKEN  }}
+          submodules: recursive
+
+      - name: Test Internal
+        run: docker compose -f docker-compose.yml -f tests/docker-compose.yml run app pytest tests/internal.py
+
+  Structure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACCESS_TOKEN  }}
+          submodules: recursive
+
+      - name: Confirm index.py existence
+        run: |
+          if [ -f "index.py" ]; then
+            echo "index.py exists"
+          else
+            echo "index.py does not exist"
+            exit 1
+          fi
+
+      - name: Confirm handler.py existence
+        run: |
+          if [ -f "handler.py" ]; then
+            echo "handler.py exists"
+          else
+            echo "handler.py does not exist"
+            exit 1
+          fi
+
+      - name: Confirm Dockerfile existence
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "Dockerfile exists"
+          else
+            echo "Dockerfile does not exist"
+            exit 1
+          fi
+
+      - name: Confirm docker-compose.yml existence
+        run: |
+          if [ -f "docker-compose.yml" ]; then
+            echo "docker-compose.yml exists"
+          else
+            echo "docker-compose.yml does not exist"
+            exit 1
+          fi
+      - name: Confirm requirements.txt existence
+        run: |
+          if [ -f "requirements.txt" ]; then
+            echo "requirements.txt exists"
+          else
+            echo "requirements.txt does not exist"
+            exit 1
+          fi
+
+  Build-and-push:
+    runs-on: ubuntu-latest
+    needs: [External, Internal, Structure]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.ACCESS_TOKEN  }}
+          submodules: recursive
+
+      - name: Build
+        run: docker compose build app
+
+      - name: Tag and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN}}
+        run: |
+          docker login ghcr.io -u fonzzy1 -p $GITHUB_TOKEN
+          repo_name=$(echo "${{ github.repository }}" | awk '{print tolower($0)}')
+          docker tag app ghcr.io/$repo_name:${{ github.sha }}
+          docker push ghcr.io/$repo_name:${{ github.sha }}
